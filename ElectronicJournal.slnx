@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="ElectronicJournal/ElectronicJournal.Android/ElectronicJournal.Android.csproj" />
+  <Project Path="ElectronicJournal/ElectronicJournal.Browser/ElectronicJournal.Browser.csproj" />
+  <Project Path="ElectronicJournal/ElectronicJournal.Desktop/ElectronicJournal.Desktop.csproj" />
+  <Project Path="ElectronicJournal/ElectronicJournal.iOS/ElectronicJournal.iOS.csproj" />
+  <Project Path="ElectronicJournal/ElectronicJournal/ElectronicJournal.csproj" />
+</Solution>
