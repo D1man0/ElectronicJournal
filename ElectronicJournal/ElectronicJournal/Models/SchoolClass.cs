@@ -1,7 +1,8 @@
-﻿using System;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text;
-using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace ElectronicJournal.Models;
 
@@ -11,4 +12,5 @@ public partial class SchoolClass : ObservableObject
 
     [ObservableProperty]
     private string _name = string.Empty;
+    public ObservableCollection<Student> Students { get; } = new(); // Список учеников связанных с классом
 }

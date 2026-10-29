@@ -6,12 +6,6 @@
 		<AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 	</PropertyGroup>
 	<ItemGroup>
-	  <AvaloniaXaml Remove="Services\**" />
-	  <Compile Remove="Services\**" />
-	  <EmbeddedResource Remove="Services\**" />
-	  <None Remove="Services\**" />
-	</ItemGroup>
-	<ItemGroup>
 	  <AvaloniaXaml Remove="Views\ConfirmDialog.axaml" />
 	</ItemGroup>
 	<ItemGroup>
