@@ -1,7 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
-using ElectronicJournal.Services;
 using ElectronicJournal.ViewModels;
 using ElectronicJournal.Views;
 
@@ -19,8 +18,9 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var mainWindow = new MainWindow();
-            var dialogService = new DialogService(mainWindow);
-            mainWindow.DataContext = new MainWindowViewModel(dialogService);
+
+            mainWindow.DataContext = new MainWindowViewModel();
+
             desktop.MainWindow = mainWindow;
         }
 

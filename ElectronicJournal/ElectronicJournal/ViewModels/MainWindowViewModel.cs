@@ -1,16 +1,14 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ElectronicJournal.Models;
-using ElectronicJournal.Services;
-using System.Collections.ObjectModel;
-using System.Threading.Tasks;
 
 namespace ElectronicJournal.ViewModels;
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private readonly IDialogService _dialogService;
     private int _nextId = 1;
+    private SchoolClass? _classToDelete;
 
     public ObservableCollection<SchoolClass> Classes { get; } = new();
 
@@ -20,34 +18,63 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _newClassName = string.Empty;
 
-    public MainWindowViewModel(IDialogService dialogService)
+    [ObservableProperty]
+    private bool _isConfirmDeleteVisible;
+
+    [ObservableProperty]
+    private string _confirmMessage = string.Empty;
+
+    public MainWindowViewModel()
     {
-        _dialogService = dialogService;
+        // Демо-данные
+        Classes.Add(new SchoolClass { Id = _nextId++, Name = "5А" });
+        Classes.Add(new SchoolClass { Id = _nextId++, Name = "6Б" });
     }
 
-    [RelayCommand]
+    [RelayCommand] //Добавление класса
     private void AddClass()
     {
         var name = NewClassName?.Trim();
-        if (string.IsNullOrWhiteSpace(name))
-            return;
+        if (string.IsNullOrWhiteSpace(name)) return;
 
         Classes.Add(new SchoolClass { Id = _nextId++, Name = name });
         NewClassName = string.Empty;
     }
 
-    [RelayCommand]
-    private async Task DeleteClassAsync()
+    [RelayCommand] //Открытие класса
+    private void OpenClass(SchoolClass? schoolClass)
     {
-        if (SelectedClass is null)
-            return;
 
-        var confirmed = await _dialogService.ConfirmAsync(
-            $"Удалить класс «{SelectedClass.Name}»?");
-        if (!confirmed)
-            return;
+    }
 
-        Classes.Remove(SelectedClass);
-        SelectedClass = null;
+    [RelayCommand] //Подтверждение удаления класса
+    private void DeleteClass(SchoolClass? schoolClass)
+    {
+        if (schoolClass is null) return;
+
+        _classToDelete = schoolClass;
+        ConfirmMessage = $"Удалить класс «{schoolClass.Name}»?";
+        IsConfirmDeleteVisible = true;
+    }
+
+    [RelayCommand] //Удаление класса
+    private void ConfirmDelete()
+    {
+        if (_classToDelete != null)
+        {
+            Classes.Remove(_classToDelete);
+            if (SelectedClass == _classToDelete)
+                SelectedClass = null;
+
+            _classToDelete = null;
+        }
+        IsConfirmDeleteVisible = false;
+    }
+
+    [RelayCommand] //Отмена удаления
+    private void CancelDelete()
+    {
+        _classToDelete = null;
+        IsConfirmDeleteVisible = false;
     }
 }
