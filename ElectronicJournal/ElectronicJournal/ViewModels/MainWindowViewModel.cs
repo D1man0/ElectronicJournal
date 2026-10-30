@@ -1,8 +1,13 @@
-﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ElectronicJournal.Models;
+using ElectronicJournal.Services;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ElectronicJournal.ViewModels;
 
@@ -11,6 +16,10 @@ public partial class MainWindowViewModel : ObservableObject
     private int _nextClassId = 1;
     private int _nextStudentId = 1;
 
+    public ProfileViewModel Profile { get; }
+    public AdminViewModel Admin { get; }
+    public StudentProfileViewModel StudentProfile { get; }
+
     private SchoolClass? _classToDelete;
     private Student? _studentToDelete;
 
@@ -18,6 +27,28 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<SchoolClass> Classes { get; } = new();
     public ObservableCollection<Student> FilteredStudents { get; } = new();
+    private readonly DatabaseService _dbService;
+
+    #region свойства
+
+    //Свойства авторизации
+    [ObservableProperty]
+    private bool _isLoginVisible = true;
+
+    [ObservableProperty]
+    private string _loginInput = string.Empty;
+
+    [ObservableProperty]
+    private string _passwordInput = string.Empty;
+
+    [ObservableProperty]
+    private string _loginError = string.Empty;
+
+    [ObservableProperty]
+    private User? _currentUser;
+
+    [ObservableProperty]
+    private bool _isTeacherViewVisible = false;
 
     //Свойства навигации
     [ObservableProperty]
@@ -25,6 +56,12 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isStudentsViewVisible = false;
+
+    [ObservableProperty]
+    private bool _isAdminViewVisible = false;
+
+    [ObservableProperty]
+    private bool _isStudentProfileViewVisible = false;
 
     //Свойства классов
     [ObservableProperty]
@@ -47,25 +84,125 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     private string _confirmMessage = string.Empty;
 
-    public MainWindowViewModel()
+    #endregion
+
+    public MainWindowViewModel(DatabaseService dbService)
     {
-        // Демо-данные
-        var class5A = new SchoolClass { Id = _nextClassId++, Name = "5А" };
-        class5A.Students.Add(new Student { Id = _nextStudentId++, Name = "Иванов Иван" });
-        class5A.Students.Add(new Student { Id = _nextStudentId++, Name = "Петров Петр" });
+        _dbService = dbService;
 
-        var class6B = new SchoolClass { Id = _nextClassId++, Name = "6Б" };
-        class6B.Students.Add(new Student { Id = _nextStudentId++, Name = "Сидоров Сидор" });
+        Profile = new ProfileViewModel(dbService);
+        Profile.LogoutRequested += HandleLogout;
 
-        _allClasses.Add(class5A);
-        _allClasses.Add(class6B);
+        Admin = new AdminViewModel(dbService);
+        Admin.UserDeleted += HandleAdminDeletedUser;
+
+        StudentProfile = new StudentProfileViewModel();
+        StudentProfile.BackRequested += HandleStudentProfileBack;
 
         FilterClasses();
     }
 
+    //Авторизация
+
+    [RelayCommand]
+    private void Login()//Вход
+    {
+        LoginError = string.Empty;
+
+        var user = _dbService.Authenticate(LoginInput, PasswordInput);
+        if (user == null)
+        {
+            LoginError = "Неверный логин или пароль";
+            return;
+        }
+
+        CurrentUser = user;
+        Profile.CurrentUser = user;
+        IsLoginVisible = false;
+        
+        //Сброс всех экранов перед входом
+        IsClassesViewVisible = false;
+        IsStudentsViewVisible = false;
+        IsAdminViewVisible = false;
+        IsStudentProfileViewVisible = false;
+        IsTeacherViewVisible = false;
+
+        if (user.Role == UserRole.Admin)//Если роль админ
+        {
+            IsAdminViewVisible = true;
+            IsTeacherViewVisible = false;
+            IsClassesViewVisible = false;
+            IsStudentsViewVisible = false;
+
+            Admin.CurrentUser = user;
+            Admin.LoadUsers();
+        }
+        else if (user.Role == UserRole.Teacher)//Если учитель
+        {
+            IsAdminViewVisible = false;
+            IsTeacherViewVisible = true;
+            IsClassesViewVisible = true;
+            IsStudentsViewVisible = false;
+        }
+        else if (user.Role == UserRole.Student)//Если ученик
+        {
+            IsTeacherViewVisible = false;
+            IsClassesViewVisible = false;
+            IsStudentsViewVisible = false;
+            IsAdminViewVisible = false;
+
+            Student? loggedInStudent = null;
+            SchoolClass? studentClass = null;
+
+            foreach (var c in _allClasses)
+            {
+                var s = c.Students.FirstOrDefault(x => x.Id == user.StudentId);
+                if (s != null)
+                {
+                    loggedInStudent = s;
+                    studentClass = c;
+                    break;
+                }
+            }
+
+            if (loggedInStudent != null && studentClass != null)
+            {
+                StudentProfile.CurrentStudent = loggedInStudent;
+                StudentProfile.CurrentClass = studentClass;
+                StudentProfile.CanGoBack = false;
+                IsStudentProfileViewVisible = true;
+            }
+            else
+            {
+                LoginError = "Ученик не найден в базе данных классов.";
+                IsLoginVisible = true;
+            }
+        }
+    }
+    private void HandleLogout()//Выход
+    {
+        CurrentUser = null;
+        LoginInput = string.Empty;
+        PasswordInput = string.Empty;
+        LoginError = string.Empty;
+
+        IsTeacherViewVisible = false;
+        IsAdminViewVisible = false;
+        IsClassesViewVisible = true;
+        IsStudentsViewVisible = false;
+        IsStudentProfileViewVisible = false;
+
+        IsLoginVisible = true;
+    }
+    private void HandleStudentProfileBack()
+    {
+        IsStudentProfileViewVisible = false;
+        IsStudentsViewVisible = true;
+    }
+
     //Поиск
 
-    private void FilterClasses()
+    private void FilterClasses() //Поиск класса
     {
         Classes.Clear();
         var search = NewClassName?.Trim().ToLower() ?? "";
@@ -83,7 +220,7 @@ public partial class MainWindowViewModel : ObservableObject
             FilterClasses();
         }
     }
-    private void FilterStudents()
+    private void FilterStudents() //Поиск ученика
     {
         FilteredStudents.Clear();
         if (SelectedClass == null) return;
@@ -168,7 +305,13 @@ public partial class MainWindowViewModel : ObservableObject
         var name = NewStudentName?.Trim();
         if (string.IsNullOrWhiteSpace(name) || SelectedClass == null) return;
 
-        SelectedClass.Students.Add(new Student { Id = _nextStudentId++, Name = name });
+        var newStudent = new Student { Id = _nextStudentId++, Name = name };
+        SelectedClass.Students.Add(newStudent);
+
+        //Логин и пароль генерируются автоматически, пароль по умолчанию 1234
+        _dbService.RegisterStudentUser(newStudent.Name, newStudent.Id, out string generatedLogin, out string generatedPassword);
+        //Вывод в консоль для проверки
+        System.Diagnostics.Debug.WriteLine($"Создан ученик: {name}. Логин: {generatedLogin}, Пароль: {generatedPassword}");
 
         NewStudentName = string.Empty;
         FilterStudents();
@@ -177,7 +320,14 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand] //Открыть ученика
     private void OpenStudent(Student? student)
     {
+        if (student == null) return;
 
+        StudentProfile.CurrentStudent = student;
+        StudentProfile.CurrentClass = SelectedClass;
+        StudentProfile.CanGoBack = true;
+
+        IsStudentsViewVisible = false;
+        IsStudentProfileViewVisible = true;
     }
 
     [RelayCommand] //Удалить ученика
@@ -195,19 +345,24 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand] //Подтверждение удаления
     private void ConfirmDelete()
     {
-        if (_classToDelete != null)
+        if (_classToDelete != null)//Удаление класса
         {
-            // Каскадное удаление
+            var studentIds = _classToDelete.Students.Select(s => s.Id).ToList();
+            _dbService.DeleteUsersByStudentIds(studentIds);
+
             _allClasses.Remove(_classToDelete);
-            FilterClasses();                  
+            FilterClasses();
 
             if (SelectedClass == _classToDelete) GoBackToClasses();
             _classToDelete = null;
         }
-        else if (_studentToDelete != null && SelectedClass != null)
+        else if (_studentToDelete != null && SelectedClass != null)//Удаление конкретного ученика
         {
+            _dbService.DeleteStudentUser(_studentToDelete.Id);
+
             SelectedClass.Students.Remove(_studentToDelete);
             FilterStudents();
+
             if (SelectedStudent == _studentToDelete) SelectedStudent = null;
             _studentToDelete = null;
         }
@@ -221,5 +376,26 @@ public partial class MainWindowViewModel : ObservableObject
         _classToDelete = null;
         _studentToDelete = null;
         IsConfirmDeleteVisible = false;
+    }
+    //Вызывается, когда Админ удаляет пользователя
+    private void HandleAdminDeletedUser(User user)
+    {
+        if (user.StudentId == null) return;
+
+        foreach (var schoolClass in _allClasses)
+        {
+            var student = schoolClass.Students.FirstOrDefault(s => s.Id == user.StudentId);
+            if (student != null)
+            {
+                schoolClass.Students.Remove(student);
+
+                if (SelectedClass == schoolClass)
+                {
+                    FilterStudents();
+                    if (SelectedStudent == student) SelectedStudent = null;
+                }
+                break;
+            }
+        }
     }
 }

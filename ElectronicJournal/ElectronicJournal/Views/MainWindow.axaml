@@ -25,63 +25,163 @@
     </Style>
   </Window.Styles>
 
+
   <Grid>
-    <!--Список классов-->
-    <Grid Margin="16" RowDefinitions="Auto,Auto,*" IsVisible="{Binding IsClassesViewVisible}">
-      <TextBlock Grid.Row="0" Text="Классы" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,12" />
-
-      <!--Кнопка писка и добавления-->
-      <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
-        <TextBox Grid.Column="0" Text="{Binding NewClassName, Mode=TwoWay}" Margin="0,0,8,0" />
-        <Button Grid.Column="1" Content="Найти" Command="{Binding SearchClassesCommand}" Margin="0,0,8,0" />
-        <Button Grid.Column="2" Content="Добавить" Command="{Binding AddClassCommand}" />
+    <Grid RowDefinitions="Auto,*">
+      
+      <!--Верхняя панель-->
+      <Grid Grid.Row="0" Margin="16,16,16,8" IsVisible="{Binding !IsLoginVisible}">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+          <Button Content="Профиль" Command="{Binding Profile.OpenProfileCommand}" Padding="8,4" />
+          <Button Content="Выйти" Command="{Binding Profile.LogoutCommand}" Classes="danger" Padding="8,4" />
+        </StackPanel>
       </Grid>
 
-      <ListBox Grid.Row="2" ItemsSource="{Binding Classes}" SelectedItem="{Binding SelectedClass, Mode=TwoWay}">
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="models:SchoolClass">
-            <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="16" VerticalAlignment="Center" Margin="4" />
-              <StackPanel Grid.Column="1" Classes="actions" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,8,0">
-                <Button Content="Открыть" Classes="action" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).OpenClassCommand}" CommandParameter="{Binding}" />
-                <Button Content="Удалить" Classes="action danger" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).DeleteClassCommand}" CommandParameter="{Binding}" />
+      <Grid Grid.Row="1" Margin="16,0,16,16">
+        
+        <!--Список классов-->
+        <Grid RowDefinitions="Auto,Auto,*" IsVisible="{Binding IsClassesViewVisible}">
+          <TextBlock Grid.Row="0" Text="Классы" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,12" />
+
+          <!--Кнопка поиска и добавления-->
+          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
+            <TextBox Grid.Column="0" Text="{Binding NewClassName, Mode=TwoWay}" Margin="0,0,8,0" />
+            <Button Grid.Column="1" Content="Найти" Command="{Binding SearchClassesCommand}" Margin="0,0,8,0" />
+            <Button Grid.Column="2" Content="Добавить" Command="{Binding AddClassCommand}" />
+          </Grid>
+
+          <ListBox Grid.Row="2" ItemsSource="{Binding Classes}" SelectedItem="{Binding SelectedClass, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:SchoolClass">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="16" VerticalAlignment="Center" Margin="4" />
+                  <StackPanel Grid.Column="1" Classes="actions" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,8,0">
+
+                    <!--Кнопка открытия информации и удаления-->
+                    <Button Content="Открыть" Classes="action" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).OpenClassCommand}" CommandParameter="{Binding}" />
+                    <Button Content="Удалить" Classes="action danger" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).DeleteClassCommand}" CommandParameter="{Binding}" />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+
+        <!--Список учеников-->
+        <Grid RowDefinitions="Auto,Auto,*" IsVisible="{Binding IsStudentsViewVisible}">
+          <Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="0,0,0,12">
+            <Button Grid.Column="0" Content="← Назад" Command="{Binding GoBackToClassesCommand}" Margin="0,0,16,0" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding SelectedClass.Name, StringFormat='Ученики класса: {0}'}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+          </Grid>
+
+          <!--Кнопка поиска и добавления-->
+          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
+            <TextBox Grid.Column="0" Text="{Binding NewStudentName, Mode=TwoWay}" Watermark="ФИО ученика или поиск..." Margin="0,0,8,0" />
+            <Button Grid.Column="1" Content="Найти" Command="{Binding SearchStudentsCommand}" Margin="0,0,8,0" />
+            <Button Grid.Column="2" Content="Добавить" Command="{Binding AddStudentCommand}" />
+          </Grid>
+
+          <ListBox Grid.Row="2" ItemsSource="{Binding FilteredStudents}" SelectedItem="{Binding SelectedStudent, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="models:Student">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="16" VerticalAlignment="Center" Margin="4" />
+
+                  <!--Кнопка открытия информации и удаления-->
+                  <StackPanel Grid.Column="1" Classes="actions" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <Button Content="Открыть" Classes="action" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).OpenStudentCommand}" CommandParameter="{Binding}" />
+                    <Button Content="Удалить" Classes="action danger" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).DeleteStudentCommand}" CommandParameter="{Binding}" />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+
+        <!--Экран админа-->
+        <Grid RowDefinitions="Auto,Auto,*" IsVisible="{Binding IsAdminViewVisible}">
+          <TextBlock Grid.Row="0" Text="Управление пользователями" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,12" />
+          
+          <Border Grid.Row="1" Background="#2B2B2B" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+            <StackPanel Spacing="10">
+              <TextBlock Text="Добавить нового учителя" FontWeight="Bold" FontSize="16" />
+              <TextBox Text="{Binding Admin.NewTeacherLogin, Mode=TwoWay}" Watermark="Логин" />
+              <TextBox Text="{Binding Admin.NewTeacherPassword, Mode=TwoWay}" Watermark="Пароль" />
+              <Button Content="Создать учителя" Command="{Binding Admin.AddTeacherCommand}" HorizontalAlignment="Left" Background="#4CAF50" Foreground="White" />
+              <TextBlock Text="{Binding Admin.AdminMessage}" Foreground="#FFD700" FontSize="12" TextWrapping="Wrap" 
+                         IsVisible="{Binding Admin.AdminMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            </StackPanel>
+          </Border>
+
+          <Grid Grid.Row="2" RowDefinitions="Auto,*">
+            <TextBlock Grid.Row="0" Text="Все пользователи системы:" FontWeight="SemiBold" Margin="0,0,0,4" />
+            <ListBox Grid.Row="1" ItemsSource="{Binding Admin.Users}" SelectedItem="{Binding Admin.SelectedUser, Mode=TwoWay}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="models:User">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="4">
+                      <TextBlock Text="{Binding Login}" FontSize="16" />
+                      <TextBlock Text="{Binding Role}" FontSize="12" Foreground="#AAAAAA" />
+                    </StackPanel>
+                    
+                    <StackPanel Grid.Column="1" Classes="actions" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,8,0">
+                      <Button Content="Удалить" Classes="action danger" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).Admin.DeleteUserCommand}" CommandParameter="{Binding}" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+
+          <!--Оверлей подтверждения удаления для админа-->
+          <Grid Grid.RowSpan="3" IsVisible="{Binding Admin.IsConfirmDeleteVisible}" Background="#99000000" Margin="-16">
+            <Border Background="#2B2B2B" CornerRadius="8" Padding="20" MinWidth="300"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BorderBrush="#444444" BorderThickness="1">
+              <StackPanel Spacing="20">
+                <TextBlock Text="{Binding Admin.ConfirmDeleteMessage}" FontSize="16" TextWrapping="Wrap" TextAlignment="Center" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+                  <Button Content="Отмена" Command="{Binding Admin.CancelDeleteCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
+                  <Button Content="Удалить" Classes="danger" Command="{Binding Admin.ConfirmDeleteCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
+                </StackPanel>
               </StackPanel>
-            </Grid>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-    </Grid>
+            </Border>
+          </Grid>
+        </Grid>
 
-    <!--Список учеников-->
-    <Grid Margin="16" RowDefinitions="Auto,Auto,*" IsVisible="{Binding IsStudentsViewVisible}">
-      <!--Шапка с кнопкой Назад и названием класса-->
-      <Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="0,0,0,12">
-        <Button Grid.Column="0" Content="← Назад" Command="{Binding GoBackToClassesCommand}" Margin="0,0,16,0" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1" Text="{Binding SelectedClass.Name, StringFormat='Ученики класса: {0}'}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+        <!--Экран ученика-->
+        <Grid RowDefinitions="Auto,Auto,*" IsVisible="{Binding IsStudentProfileViewVisible}">    
+          <!--Шапка-->
+          <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,16">
+            
+            <!--Кнопка Назад, видимость управляется из ViewModel-->
+            <Button Grid.Column="0" 
+                    Content="← Назад" 
+                    Command="{Binding StudentProfile.GoBackCommand}" 
+                    Margin="0,0,16,0" 
+                    VerticalAlignment="Center" 
+                    IsVisible="{Binding StudentProfile.CanGoBack}" />
+            
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+              <TextBlock Text="{Binding StudentProfile.CurrentStudent.Name}" FontSize="22" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding StudentProfile.CurrentClass.Name, StringFormat='Класс: {0}'}" FontSize="14" Foreground="#AAAAAA" />
+            </StackPanel>
+          </Grid>
+
+          <!--Заголовок таблицы оценок-->
+          <TextBlock Grid.Row="1" Text="Журнал оценок" FontSize="18" FontWeight="Bold" Margin="0,0,0,8" />
+
+          <!--Место под таблицу, будет позже-->
+          <Border Grid.Row="2" Background="#2B2B2B" CornerRadius="8" BorderBrush="#444444" BorderThickness="1">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
+              <TextBlock Text="Здесь будет таблица с оценками" FontSize="16" Foreground="#888888" />
+              <TextBlock Text="Но пока ее нет" FontSize="12" Foreground="#666666" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Border>
+        </Grid>
       </Grid>
-
-      <!--Кнопка писка и добавления-->
-      <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,8">
-        <TextBox Grid.Column="0" Text="{Binding NewStudentName, Mode=TwoWay}" Watermark="ФИО ученика или поиск..." Margin="0,0,8,0" />
-        <Button Grid.Column="1" Content="Найти" Command="{Binding SearchStudentsCommand}" Margin="0,0,8,0" />
-        <Button Grid.Column="2" Content="Добавить" Command="{Binding AddStudentCommand}" />
-      </Grid>
-
-      <ListBox Grid.Row="2" ItemsSource="{Binding FilteredStudents}" SelectedItem="{Binding SelectedStudent, Mode=TwoWay}">
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="models:Student">
-            <Grid ColumnDefinitions="*,Auto">
-              <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="16" VerticalAlignment="Center" Margin="4" />
-              <StackPanel Grid.Column="1" Classes="actions" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,8,0">
-                <Button Content="Открыть" Classes="action" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).OpenStudentCommand}" CommandParameter="{Binding}" />
-                <Button Content="Удалить" Classes="action danger" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).DeleteStudentCommand}" CommandParameter="{Binding}" />
-              </StackPanel>
-            </Grid>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
     </Grid>
-
+    
     <!--Оверлей подтверждения-->
     <Grid IsVisible="{Binding IsConfirmDeleteVisible}" Background="#99000000">
       <Border Background="#2B2B2B" CornerRadius="8" Padding="20" MinWidth="300"
@@ -92,6 +192,44 @@
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
             <Button Content="Отмена" Command="{Binding CancelDeleteCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
             <Button Content="Удалить" Classes="danger" Command="{Binding ConfirmDeleteCommand}" MinWidth="90" HorizontalContentAlignment="Center" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!--Оверлей авторизации-->
+    <Grid IsVisible="{Binding IsLoginVisible}" Background="#1E1E1E">
+      <Border Background="#2B2B2B" CornerRadius="8" Padding="30" Width="320"
+              HorizontalAlignment="Center" VerticalAlignment="Center"
+              BorderBrush="#444444" BorderThickness="1">
+        <StackPanel Spacing="15">
+          <TextBlock Text="Вход в систему" FontSize="22" FontWeight="Bold" TextAlignment="Center" Margin="0,0,0,10" />
+          <TextBlock Text="Логин" FontSize="12" Foreground="#AAAAAA" />
+          <TextBox Text="{Binding LoginInput, Mode=TwoWay}" Watermark="Введите логин" />
+          <TextBlock Text="Пароль" FontSize="12" Foreground="#AAAAAA" Margin="0,5,0,0" />
+          <TextBox Text="{Binding PasswordInput, Mode=TwoWay}" PasswordChar="●" Watermark="Введите пароль" />
+          <TextBlock Text="{Binding LoginError}" Foreground="#FF6666" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding LoginError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <Button Content="Войти" Command="{Binding LoginCommand}" Background="#4CAF50" Foreground="White" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,10,0,0" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!--Оверлей профиля-->
+    <Grid IsVisible="{Binding Profile.IsProfileVisible}" Background="#99000000">
+      <Border Background="#2B2B2B" CornerRadius="8" Padding="20" Width="350"
+              HorizontalAlignment="Center" VerticalAlignment="Center"
+              BorderBrush="#444444" BorderThickness="1">
+        <StackPanel Spacing="15">
+          <TextBlock Text="Мой профиль" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" />
+          <TextBlock Text="Новый логин" FontSize="12" Foreground="#AAAAAA" />
+          <TextBox Text="{Binding Profile.ProfileNewLogin, Mode=TwoWay}" Watermark="Введите логин" />
+          <TextBlock Text="Новый пароль (оставьте пустым, чтобы не менять)" FontSize="12" Foreground="#AAAAAA" />
+          <TextBox Text="{Binding Profile.ProfileNewPassword, Mode=TwoWay}" PasswordChar="●" Watermark="Новый пароль" />
+          <TextBlock Text="{Binding Profile.ProfileMessage}" Foreground="#FFD700" FontSize="12" TextWrapping="Wrap" 
+                     IsVisible="{Binding Profile.ProfileMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" Margin="0,10,0,0">
+            <Button Content="Отмена" Command="{Binding Profile.CloseProfileCommand}" MinWidth="100" HorizontalContentAlignment="Center" />
+            <Button Content="Сохранить" Command="{Binding Profile.SaveProfileCommand}" Background="#4CAF50" Foreground="White" MinWidth="100" HorizontalContentAlignment="Center" />
           </StackPanel>
         </StackPanel>
       </Border>
