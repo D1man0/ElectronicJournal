@@ -29,13 +29,31 @@ public class DatabaseService
                 Login TEXT NOT NULL UNIQUE,
                 PasswordHash TEXT NOT NULL,
                 Role INTEGER NOT NULL,
-                StudentId INTEGER
+                StudentId INTEGER,
+                Subject TEXT,
+                ManagedClassId INTEGER
+            );
+            CREATE TABLE IF NOT EXISTS Grades (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                StudentId INTEGER NOT NULL,
+                Subject TEXT NOT NULL,
+                Date TEXT NOT NULL,
+                Value INTEGER NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS Classes (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS Students (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ClassId INTEGER NOT NULL,
+                Name TEXT NOT NULL
             );";
         command.ExecuteNonQuery();
 
         // Проверяем, есть ли админ, если нет - создаем дефолтного
         var checkAdminCmd = connection.CreateCommand();
-        checkAdminCmd.CommandText = "SELECT COUNT(*) FROM Users WHERE Role = 0"; // 0 = Admin
+        checkAdminCmd.CommandText = "SELECT COUNT(*) FROM Users WHERE Role = 0";// 0 = Admin
         var count = Convert.ToInt32(checkAdminCmd.ExecuteScalar());
 
         if (count == 0)
@@ -54,7 +72,7 @@ public class DatabaseService
         connection.Open();
 
         var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT Id, Login, Role, StudentId FROM Users WHERE Login = $login AND PasswordHash = $hash";
+        cmd.CommandText = "SELECT Id, Login, Role, StudentId, Subject, ManagedClassId FROM Users WHERE Login = $login AND PasswordHash = $hash";
         cmd.Parameters.AddWithValue("$login", login);
         cmd.Parameters.AddWithValue("$hash", PasswordHasher.Hash(password));
 
@@ -66,10 +84,88 @@ public class DatabaseService
                 Id = reader.GetInt32(0),
                 Login = reader.GetString(1),
                 Role = (UserRole)reader.GetInt32(2),
-                StudentId = reader.IsDBNull(3) ? null : reader.GetInt32(3)
+                StudentId = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                Subject = reader.IsDBNull(4) ? null : reader.GetString(4),
+                ManagedClassId = reader.IsDBNull(5) ? null : reader.GetInt32(5)
             };
         }
         return null; //Неверный логин или пароль
+    }
+
+    public List<SchoolClass> LoadClasses()//Загрузка классов
+    {
+        var classes = new List<SchoolClass>();
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT Id, Name FROM Classes";
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            classes.Add(new SchoolClass { Id = reader.GetInt32(0), Name = reader.GetString(1) });
+        }
+        reader.Close();
+
+        //Загрузка учеников для классов
+        foreach (var cls in classes)
+        {
+            var cmdStudents = connection.CreateCommand();
+            cmdStudents.CommandText = "SELECT Id, Name FROM Students WHERE ClassId = $cid";
+            cmdStudents.Parameters.AddWithValue("$cid", cls.Id);
+
+            using var readerStudents = cmdStudents.ExecuteReader();
+            while (readerStudents.Read())
+            {
+                cls.Students.Add(new Student { Id = readerStudents.GetInt32(0), Name = readerStudents.GetString(1) });
+            }
+        }
+        return classes;
+    }
+
+    public int AddClass(string name)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = "INSERT INTO Classes (Name) VALUES ($name); SELECT last_insert_rowid();";
+        cmd.Parameters.AddWithValue("$name", name);
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+    public void DeleteClass(int classId)//Удаление класса
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var cmd1 = connection.CreateCommand();
+        cmd1.CommandText = "DELETE FROM Students WHERE ClassId = $cid";
+        cmd1.Parameters.AddWithValue("$cid", classId);
+        cmd1.ExecuteNonQuery();
+
+        var cmd2 = connection.CreateCommand();
+        cmd2.CommandText = "DELETE FROM Classes WHERE Id = $cid";
+        cmd2.Parameters.AddWithValue("$cid", classId);
+        cmd2.ExecuteNonQuery();
+    }
+    public int AddStudent(int classId, string name)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = "INSERT INTO Students (ClassId, Name) VALUES ($cid, $name); SELECT last_insert_rowid();";
+        cmd.Parameters.AddWithValue("$cid", classId);
+        cmd.Parameters.AddWithValue("$name", name);
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+    public void DeleteStudent(int studentId)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = "DELETE FROM Students WHERE Id = $sid";
+        cmd.Parameters.AddWithValue("$sid", studentId);
+        cmd.ExecuteNonQuery();
     }
 
     //Метод для создания ученика в БД
@@ -83,7 +179,7 @@ public class DatabaseService
         connection.Open();
 
         var cmd = connection.CreateCommand();
-        cmd.CommandText = "INSERT INTO Users (Login, PasswordHash, Role, StudentId) VALUES ($login, $hash, 2, $sid)";
+        cmd.CommandText = "INSERT INTO Users (Login, PasswordHash, Role, StudentId) VALUES ($login, $hash, 3, $sid)";
         cmd.Parameters.AddWithValue("$login", generatedLogin);
         cmd.Parameters.AddWithValue("$hash", PasswordHasher.Hash(generatedPassword));
         cmd.Parameters.AddWithValue("$sid", studentId);
@@ -91,21 +187,24 @@ public class DatabaseService
     }
 
     //Ну и для создания учителя в БД
-    public void RegisterTeacher(string login, string password)
+    public void RegisterStaff(string login, string password, UserRole role, string? subject, int? managedClassId)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
 
         var cmd = connection.CreateCommand();
-        cmd.CommandText = "INSERT INTO Users (Login, PasswordHash, Role) VALUES ($login, $hash, 1)";
+        cmd.CommandText = "INSERT INTO Users (Login, PasswordHash, Role, Subject, ManagedClassId) VALUES ($login, $hash, $role, $subject, $managedClassId)";
         cmd.Parameters.AddWithValue("$login", login);
         cmd.Parameters.AddWithValue("$hash", PasswordHasher.Hash(password));
+        cmd.Parameters.AddWithValue("$role", (int)role);
+        cmd.Parameters.AddWithValue("$subject", subject ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("$managedClassId", managedClassId ?? (object)DBNull.Value);
 
-        cmd.ExecuteNonQuery(); // Если логин занят - исключение
+        cmd.ExecuteNonQuery();// Если логин занят - исключение
     }
 
     //Изменение логина и пароля после авторизации
-    public bool UpdateUser(int userId, string newLogin, string newPasswordHash)
+    public bool UpdateUser(int userId, string newLogin, string? newPasswordHash)
     {
         using var connection = new SqliteConnection(_connectionString);
         connection.Open();
@@ -142,7 +241,7 @@ public class DatabaseService
         connection.Open();
 
         var cmd = connection.CreateCommand();
-        cmd.CommandText = "SELECT Id, Login, Role, StudentId FROM Users";
+        cmd.CommandText = "SELECT Id, Login, Role, StudentId, Subject, ManagedClassId FROM Users";
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
@@ -152,7 +251,9 @@ public class DatabaseService
                 Id = reader.GetInt32(0),
                 Login = reader.GetString(1),
                 Role = (UserRole)reader.GetInt32(2),
-                StudentId = reader.IsDBNull(3) ? null : reader.GetInt32(3)
+                StudentId = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                Subject = reader.IsDBNull(4) ? null : reader.GetString(4),
+                ManagedClassId = reader.IsDBNull(5) ? null : reader.GetInt32(5)
             });
         }
         return users;
@@ -187,5 +288,47 @@ public class DatabaseService
         var cmd = connection.CreateCommand();
         cmd.CommandText = $"DELETE FROM Users WHERE StudentId IN ({ids})";
         cmd.ExecuteNonQuery();
+    }
+
+    //Поставить оценку
+    public void AddGrade(int studentId, string subject, DateTime date, int value)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = "INSERT INTO Grades (StudentId, Subject, Date, Value) VALUES ($sid, $subject, $date, $value)";
+        cmd.Parameters.AddWithValue("$sid", studentId);
+        cmd.Parameters.AddWithValue("$subject", subject);
+        cmd.Parameters.AddWithValue("$date", date.ToString("yyyy-MM-dd"));
+        cmd.Parameters.AddWithValue("$value", value);
+
+        cmd.ExecuteNonQuery();
+    }
+
+    //Получить все оценки ученика
+    public List<Grade> GetGradesForStudent(int studentId)
+    {
+        var grades = new List<Grade>();
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        var cmd = connection.CreateCommand();
+        cmd.CommandText = "SELECT Id, StudentId, Subject, Date, Value FROM Grades WHERE StudentId = $sid ORDER BY Date";
+        cmd.Parameters.AddWithValue("$sid", studentId);
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            grades.Add(new Grade
+            {
+                Id = reader.GetInt32(0),
+                StudentId = reader.GetInt32(1),
+                Subject = reader.GetString(2),
+                Date = DateTime.Parse(reader.GetString(3)),
+                Value = reader.GetInt32(4)
+            });
+        }
+        return grades;
     }
 }

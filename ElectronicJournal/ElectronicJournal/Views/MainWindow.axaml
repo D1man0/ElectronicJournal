@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ElectronicJournal.ViewModels"
         xmlns:models="using:ElectronicJournal.Models"
+        xmlns:behaviors="using:ElectronicJournal.Behaviors"
         x:Class="ElectronicJournal.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Электронный журнал"
@@ -31,11 +32,21 @@
       
       <!--Верхняя панель-->
       <Grid Grid.Row="0" Margin="16,16,16,8" IsVisible="{Binding !IsLoginVisible}">
+        
+        <!--Отображение предмета-->
+        <TextBlock Text="{Binding CurrentUser.Subject, StringFormat='Предмет: {0}'}" 
+                   VerticalAlignment="Center" 
+                   FontSize="14" 
+                   FontWeight="SemiBold"
+                   Foreground="#4CAF50"
+                   IsVisible="{Binding CurrentUser.Subject, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+        <!--Кнопки справа-->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
           <Button Content="Профиль" Command="{Binding Profile.OpenProfileCommand}" Padding="8,4" />
           <Button Content="Выйти" Command="{Binding Profile.LogoutCommand}" Classes="danger" Padding="8,4" />
         </StackPanel>
-      </Grid>
+       </Grid>
 
       <Grid Grid.Row="1" Margin="16,0,16,16">
         
@@ -99,39 +110,65 @@
         </Grid>
 
         <!--Экран админа-->
-        <Grid RowDefinitions="Auto,Auto,*" IsVisible="{Binding IsAdminViewVisible}">
-          <TextBlock Grid.Row="0" Text="Управление пользователями" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,12" />
+        <Grid IsVisible="{Binding IsAdminViewVisible}">
           
-          <Border Grid.Row="1" Background="#2B2B2B" CornerRadius="8" Padding="16" Margin="0,0,0,16">
-            <StackPanel Spacing="10">
-              <TextBlock Text="Добавить нового учителя" FontWeight="Bold" FontSize="16" />
-              <TextBox Text="{Binding Admin.NewTeacherLogin, Mode=TwoWay}" Watermark="Логин" />
-              <TextBox Text="{Binding Admin.NewTeacherPassword, Mode=TwoWay}" Watermark="Пароль" />
-              <Button Content="Создать учителя" Command="{Binding Admin.AddTeacherCommand}" HorizontalAlignment="Left" Background="#4CAF50" Foreground="White" />
-              <TextBlock Text="{Binding Admin.AdminMessage}" Foreground="#FFD700" FontSize="12" TextWrapping="Wrap" 
-                         IsVisible="{Binding Admin.AdminMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            </StackPanel>
-          </Border>
+          <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+            <Grid RowDefinitions="Auto,Auto,Auto" Margin="0,0,10,0">
+              <TextBlock Grid.Row="0" Text="Управление пользователями" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,12" />
+              
+              <Border Grid.Row="1" Background="#2B2B2B" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="Добавить сотрудника" FontWeight="Bold" FontSize="16" />
+                  
+                  <TextBox Text="{Binding Admin.NewTeacherLogin, Mode=TwoWay}" Watermark="Логин" />
+                  <TextBox Text="{Binding Admin.NewTeacherPassword, Mode=TwoWay}" Watermark="Пароль" />
+                  
+                  <!--Выбор роли-->
+                  <TextBlock Text="Роль:" FontSize="12" Foreground="#AAAAAA" Margin="0,5,0,0" />
+                  <ComboBox ItemsSource="{Binding Admin.Roles}" SelectedItem="{Binding Admin.SelectedRole, Mode=TwoWay}" HorizontalAlignment="Stretch" MaxDropDownHeight="200" />
+                  
+                  <!--Выбор предмета-->
+                  <StackPanel IsVisible="{Binding Admin.IsTeacherRoleSelected}">
+                      <TextBlock Text="Предмет:" FontSize="12" Foreground="#AAAAAA" Margin="0,5,0,0" />
+                      <ComboBox ItemsSource="{Binding Admin.Subjects}" SelectedItem="{Binding Admin.SelectedSubject, Mode=TwoWay}" HorizontalAlignment="Stretch" MaxDropDownHeight="200" />
+                  </StackPanel>
 
-          <Grid Grid.Row="2" RowDefinitions="Auto,*">
-            <TextBlock Grid.Row="0" Text="Все пользователи системы:" FontWeight="SemiBold" Margin="0,0,0,4" />
-            <ListBox Grid.Row="1" ItemsSource="{Binding Admin.Users}" SelectedItem="{Binding Admin.SelectedUser, Mode=TwoWay}">
-              <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="models:User">
-                  <Grid ColumnDefinitions="*,Auto">
-                    <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="4">
-                      <TextBlock Text="{Binding Login}" FontSize="16" />
-                      <TextBlock Text="{Binding Role}" FontSize="12" Foreground="#AAAAAA" />
-                    </StackPanel>
-                    
-                    <StackPanel Grid.Column="1" Classes="actions" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,8,0">
-                      <Button Content="Удалить" Classes="action danger" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).Admin.DeleteUserCommand}" CommandParameter="{Binding}" />
-                    </StackPanel>
-                  </Grid>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-          </Grid>
+                  <!--Выбор класса-->
+                  <StackPanel IsVisible="{Binding Admin.IsClassTeacherRoleSelected}">
+                      <TextBlock Text="Класс:" FontSize="12" Foreground="#AAAAAA" Margin="0,5,0,0" />
+                      <ComboBox ItemsSource="{Binding Admin.Classes}" SelectedItem="{Binding Admin.SelectedClass, Mode=TwoWay}" DisplayMemberBinding="{Binding Name}" HorizontalAlignment="Stretch" MaxDropDownHeight="200" />
+                  </StackPanel>
+
+                  <Button Content="Создать сотрудника" Command="{Binding Admin.AddTeacherCommand}" HorizontalAlignment="Left" Background="#4CAF50" Foreground="White" Margin="0,10,0,0" />
+                  <TextBlock Text="{Binding Admin.AdminMessage}" Foreground="#FFD700" FontSize="12" TextWrapping="Wrap" 
+                             IsVisible="{Binding Admin.AdminMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </Border>
+
+              <!--Список пользователей-->
+              <Grid Grid.Row="2" RowDefinitions="Auto,Auto">
+                <TextBlock Grid.Row="0" Text="Все пользователи системы:" FontWeight="SemiBold" Margin="0,0,0,8" />
+                
+                <ListBox Grid.Row="1" ItemsSource="{Binding Admin.Users}" SelectedItem="{Binding Admin.SelectedUser, Mode=TwoWay}" MinHeight="250" MaxHeight="400">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="models:User">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="4">
+                          <TextBlock Text="{Binding Login}" FontSize="16" />
+                          <TextBlock Text="{Binding Role}" FontSize="12" Foreground="#AAAAAA" />
+                          <TextBlock Text="{Binding Subject, StringFormat='Предмет: {0}'}" FontSize="11" Foreground="#888888" IsVisible="{Binding Subject, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        </StackPanel>
+                        
+                        <StackPanel Grid.Column="1" Classes="actions" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,8,0">
+                          <Button Content="Удалить" Classes="action danger" Command="{Binding $parent[ListBox].((vm:MainWindowViewModel)DataContext).Admin.DeleteUserCommand}" CommandParameter="{Binding}" />
+                        </StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Grid>
+          </ScrollViewer>
 
           <!--Оверлей подтверждения удаления для админа-->
           <Grid Grid.RowSpan="3" IsVisible="{Binding Admin.IsConfirmDeleteVisible}" Background="#99000000" Margin="-16">
@@ -150,17 +187,12 @@
         </Grid>
 
         <!--Экран ученика-->
-        <Grid RowDefinitions="Auto,Auto,*" IsVisible="{Binding IsStudentProfileViewVisible}">    
+        <Grid RowDefinitions="Auto,Auto,Auto,*" IsVisible="{Binding IsStudentProfileViewVisible}">
+          
           <!--Шапка-->
-          <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,16">
-            
-            <!--Кнопка Назад, видимость управляется из ViewModel-->
-            <Button Grid.Column="0" 
-                    Content="← Назад" 
-                    Command="{Binding StudentProfile.GoBackCommand}" 
-                    Margin="0,0,16,0" 
-                    VerticalAlignment="Center" 
-                    IsVisible="{Binding StudentProfile.CanGoBack}" />
+          <Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="0,0,0,8">
+            <Button Grid.Column="0" Content="← Назад" Command="{Binding StudentProfile.GoBackCommand}" 
+                    Margin="0,0,16,0" VerticalAlignment="Center" IsVisible="{Binding StudentProfile.CanGoBack}" />
             
             <StackPanel Grid.Column="1" VerticalAlignment="Center">
               <TextBlock Text="{Binding StudentProfile.CurrentStudent.Name}" FontSize="22" FontWeight="SemiBold" />
@@ -168,16 +200,52 @@
             </StackPanel>
           </Grid>
 
-          <!--Заголовок таблицы оценок-->
-          <TextBlock Grid.Row="1" Text="Журнал оценок" FontSize="18" FontWeight="Bold" Margin="0,0,0,8" />
+          <!--Панель фильтрации-->
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12" VerticalAlignment="Center">
+            <TextBlock Text="С:" VerticalAlignment="Center" Foreground="#AAAAAA" />
+            <CalendarDatePicker SelectedDate="{Binding StudentProfile.StartDate, Mode=TwoWay}" Width="130" />
+            <TextBlock Text="По:" VerticalAlignment="Center" Foreground="#AAAAAA" />
+            <CalendarDatePicker SelectedDate="{Binding StudentProfile.EndDate, Mode=TwoWay}" Width="130" />
+          </StackPanel>
 
-          <!--Место под таблицу, будет позже-->
-          <Border Grid.Row="2" Background="#2B2B2B" CornerRadius="8" BorderBrush="#444444" BorderThickness="1">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
-              <TextBlock Text="Здесь будет таблица с оценками" FontSize="16" Foreground="#888888" />
-              <TextBlock Text="Но пока ее нет" FontSize="12" Foreground="#666666" HorizontalAlignment="Center" />
-            </StackPanel>
-          </Border>
+          <!--Таблица-->
+          <DataGrid Grid.Row="2" 
+                    ItemsSource="{Binding StudentProfile.Rows}" 
+                    AutoGenerateColumns="False" 
+                    IsReadOnly="True"
+                    GridLinesVisibility="All"
+                    HeadersVisibility="Column"
+                    HorizontalScrollBarVisibility="Auto"
+                    behaviors:StudentJournalGridBehavior.JournalViewModel="{Binding StudentProfile}" />
+        </Grid>
+
+        <!--Экран журнала-->
+        <Grid RowDefinitions="Auto,Auto,Auto,*" IsVisible="{Binding IsClassJournalVisible}">
+          
+          <!--Шапка-->
+          <Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="0,0,0,8">
+            <Button Grid.Column="0" Content="← Назад" Command="{Binding ClassJournal.GoBackCommand}" Margin="0,0,16,0" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding SelectedClass.Name, StringFormat='Журнал: {0}'}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+          </Grid>
+
+          <!--Панель фильтрации-->
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,0,0,12" VerticalAlignment="Center">
+            <TextBlock Text="С:" VerticalAlignment="Center" Foreground="#AAAAAA" />
+            <CalendarDatePicker SelectedDate="{Binding ClassJournal.StartDate, Mode=TwoWay}" Width="130" />
+            <TextBlock Text="По:" VerticalAlignment="Center" Foreground="#AAAAAA" />
+            <CalendarDatePicker SelectedDate="{Binding ClassJournal.EndDate, Mode=TwoWay}" Width="130" />
+          </StackPanel>
+
+          <!--Таблица-->
+          <DataGrid Grid.Row="2" 
+                    Name="JournalDataGrid"
+                    ItemsSource="{Binding ClassJournal.Rows}" 
+                    AutoGenerateColumns="False" 
+                    IsReadOnly="True"
+                    GridLinesVisibility="All"
+                    HeadersVisibility="Column"
+                    HorizontalScrollBarVisibility="Auto"
+                    behaviors:JournalGridBehavior.JournalViewModel="{Binding ClassJournal}" />
         </Grid>
       </Grid>
     </Grid>
