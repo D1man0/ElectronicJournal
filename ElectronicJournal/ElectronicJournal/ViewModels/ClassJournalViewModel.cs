@@ -78,6 +78,17 @@ public partial class ClassJournalViewModel : ObservableObject
                     Value = grade?.Value.ToString() ?? ""
                 });
             }
+            //Расчет среднего балла
+            var validGrades = row.Cells
+                .Where(c => !string.IsNullOrWhiteSpace(c.Value) && int.TryParse(c.Value, out _))
+                .Select(c => int.Parse(c.Value))
+                .ToList();
+
+            if (validGrades.Any())
+            {
+                row.AverageGrade = validGrades.Average().ToString("F2"); //Формат: 4.50
+            }
+
             Rows.Add(row);
         }
         OnPropertyChanged(nameof(Rows));
@@ -97,5 +108,31 @@ public partial class ClassJournalViewModel : ObservableObject
     private void GoBack()
     {
         BackRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private void SaveGrade(StudentJournalRow row)
+    {
+        if (CurrentTeacher?.Subject == null) return;
+
+        // Проходим по всем ячейкам в строке и сохраняем/обновляем
+        for (int i = 0; i < row.Cells.Count; i++)
+        {
+            var cell = row.Cells[i];
+            _dbService.UpsertGrade(row.Student.Id, CurrentTeacher.Subject, cell.Date, cell.Value);
+        }
+        var validGrades = row.Cells
+            .Where(c => !string.IsNullOrWhiteSpace(c.Value) && int.TryParse(c.Value, out _))
+            .Select(c => int.Parse(c.Value))
+            .ToList();
+
+        if (validGrades.Any())
+        {
+            row.AverageGrade = validGrades.Average().ToString("F2");//Формат: 4.50
+        }
+        else
+        {
+            row.AverageGrade = ""; //Если все оценки стерли
+        }
     }
 }

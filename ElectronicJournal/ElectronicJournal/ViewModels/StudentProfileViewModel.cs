@@ -69,6 +69,17 @@ public partial class StudentProfileViewModel : ObservableObject
                     Value = grade?.Value.ToString() ?? ""
                 });
             }
+            //Расчет среднего балла
+            var validGrades = row.Cells
+                .Where(c => !string.IsNullOrWhiteSpace(c.Value) && int.TryParse(c.Value, out _))
+                .Select(c => int.Parse(c.Value))
+                .ToList();
+
+            if (validGrades.Any())
+            {
+                row.AverageGrade = validGrades.Average().ToString("F2");//Формат: 4.50
+            }
+
             Rows.Add(row);
         }
 

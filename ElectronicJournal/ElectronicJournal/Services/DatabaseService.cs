@@ -290,22 +290,6 @@ public class DatabaseService
         cmd.ExecuteNonQuery();
     }
 
-    //Поставить оценку
-    public void AddGrade(int studentId, string subject, DateTime date, int value)
-    {
-        using var connection = new SqliteConnection(_connectionString);
-        connection.Open();
-
-        var cmd = connection.CreateCommand();
-        cmd.CommandText = "INSERT INTO Grades (StudentId, Subject, Date, Value) VALUES ($sid, $subject, $date, $value)";
-        cmd.Parameters.AddWithValue("$sid", studentId);
-        cmd.Parameters.AddWithValue("$subject", subject);
-        cmd.Parameters.AddWithValue("$date", date.ToString("yyyy-MM-dd"));
-        cmd.Parameters.AddWithValue("$value", value);
-
-        cmd.ExecuteNonQuery();
-    }
-
     //Получить все оценки ученика
     public List<Grade> GetGradesForStudent(int studentId)
     {
@@ -330,5 +314,51 @@ public class DatabaseService
             });
         }
         return grades;
+    }
+    public void UpsertGrade(int studentId, string subject, DateTime date, string valueStr)//Обновить оценку
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        var dateStr = date.ToString("yyyy-MM-dd");
+
+        //Если строка пустая
+        if (string.IsNullOrWhiteSpace(valueStr))
+        {
+            var delCmd = connection.CreateCommand();
+            delCmd.CommandText = "DELETE FROM Grades WHERE StudentId = $sid AND Subject = $subject AND Date = $date";
+            delCmd.Parameters.AddWithValue("$sid", studentId);
+            delCmd.Parameters.AddWithValue("$subject", subject);
+            delCmd.Parameters.AddWithValue("$date", dateStr);
+            delCmd.ExecuteNonQuery();
+            return;
+        }
+
+        if (!int.TryParse(valueStr, out int val)) return;
+
+        //Есть ли уже оценка на эту дату
+        var checkCmd = connection.CreateCommand();
+        checkCmd.CommandText = "SELECT COUNT(*) FROM Grades WHERE StudentId = $sid AND Subject = $subject AND Date = $date";
+        checkCmd.Parameters.AddWithValue("$sid", studentId);
+        checkCmd.Parameters.AddWithValue("$subject", subject);
+        checkCmd.Parameters.AddWithValue("$date", dateStr);
+        var count = Convert.ToInt32(checkCmd.ExecuteScalar());
+
+        var cmd = connection.CreateCommand();
+        if (count > 0)
+        {
+            //Обновление
+            cmd.CommandText = "UPDATE Grades SET Value = $val WHERE StudentId = $sid AND Subject = $subject AND Date = $date";
+        }
+        else
+        {
+            //Вставка новой
+            cmd.CommandText = "INSERT INTO Grades (StudentId, Subject, Date, Value) VALUES ($sid, $subject, $date, $val)";
+        }
+
+        cmd.Parameters.AddWithValue("$sid", studentId);
+        cmd.Parameters.AddWithValue("$subject", subject);
+        cmd.Parameters.AddWithValue("$date", dateStr);
+        cmd.Parameters.AddWithValue("$val", val);
+        cmd.ExecuteNonQuery();
     }
 }

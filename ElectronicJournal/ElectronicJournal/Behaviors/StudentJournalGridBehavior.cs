@@ -84,5 +84,13 @@ public static class StudentJournalGridBehavior
 
             grid.Columns.Add(col);
         }
+        //Последняя колонка - Средний балл
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Ср. балл",
+            Binding = new Binding("AverageGrade"),
+            Width = new DataGridLength(80),
+            IsReadOnly = true
+        });
     }
 }

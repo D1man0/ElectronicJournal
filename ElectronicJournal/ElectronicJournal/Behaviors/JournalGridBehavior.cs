@@ -1,10 +1,11 @@
-﻿using System;
-using Avalonia;
+﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates; // <--- Добавили для FuncDataTemplate
 using Avalonia.Data;
 using Avalonia.Layout;
+using ElectronicJournal.Models;
 using ElectronicJournal.ViewModels;
+using System;
 
 namespace ElectronicJournal.Behaviors;
 
@@ -55,17 +56,29 @@ public static class JournalGridBehavior
 
             var cellTemplate = new FuncDataTemplate<object>((item, _) =>
             {
-                var tb = new TextBox
+                var cb = new ComboBox
                 {
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     VerticalAlignment = VerticalAlignment.Center,
-                    TextAlignment = Avalonia.Media.TextAlignment.Center,
                     Background = Avalonia.Media.Brushes.Transparent,
-                    BorderThickness = new Thickness(0)
+                    BorderThickness = new Thickness(0),
+                    ItemsSource = new[] { "", "2", "3", "4", "5" }, //Доступные оценки
+                    Padding = new Thickness(4, 0),
+                    MinHeight = 30
+                };
+                //Привязка выбранного к ячейке
+                cb.Bind(ComboBox.SelectedItemProperty, new Binding($"Cells[{index}].Value"));
+
+                //Сохранение в БД
+                cb.SelectionChanged += (s, e) =>
+                {
+                    if (item is StudentJournalRow row)
+                    {
+                        vm.SaveGradeCommand.Execute(row);
+                    }
                 };
 
-                tb.Bind(TextBox.TextProperty, new Binding($"Cells[{index}].Value"));
-                return tb;
+                return cb;
             });
 
             //Месяц сверху, День снизу
@@ -82,5 +95,13 @@ public static class JournalGridBehavior
 
             grid.Columns.Add(col);
         }
+        //Последняя колонка - Средний балл
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Ср. балл",
+            Binding = new Binding("AverageGrade"),
+            Width = new DataGridLength(80),
+            IsReadOnly = true
+        });
     }
 }
